@@ -1,1 +1,1 @@
-A collection of quality of life mods for Lethal Company. All the mods should be client side and are friendly with vanilla players.
+A collection of quality of life mods for Lethal Company. Completely compatible with non-modded clients.

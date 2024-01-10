@@ -1,0 +1,44 @@
+name: Push Update
+
+on:
+  push:
+    branches: ["master"]
+    paths: ["icon.png", "LICENSE", "manifest.json", "README.md"]
+  workflow_dispatch:
+
+jobs:
+    process-commit:
+        name: Process Commit
+        runs-on: ubuntu-latest
+        permissions: write-all
+        steps:
+          - name: Checkout
+            uses: actions/checkout@v4
+            with:
+              fetch-depth: 0
+          - name: Setup .NET
+            uses: actions/setup-dotnet@v3
+            with:
+              dotnet-version: 8
+          - name: Process commit
+            run: dotnet run --project tools/SemVerParser/SemVerParser.csproj
+          - name: Find Zip File
+            id: find-zip
+            run: echo ZIP_FILE="$(find . -name "*.zip" -print -quit)" >> $GITHUB_ENV
+          - uses: GreenTF/upload-thunderstore-package@v4.2
+            with:
+              token: ${{ secrets.THUNDERSTORE_TOKEN }}
+              namespace: OoLunar
+              community: lethal-company
+              # https://github.com/GreenTF/upload-thunderstore-package/issues/24 claims that the zip file will fill in the version and name.
+              name: ""
+              version: ""
+              file: ${{ steps.find-zip.outputs.ZIP_FILE }}
+              categories: |
+                "Modpacks",
+                "Tools",
+                "Audio",
+                "Client-side",
+                "TV",
+                "Videos",
+                "Posters"

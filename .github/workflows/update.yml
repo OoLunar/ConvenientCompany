@@ -35,8 +35,8 @@ jobs:
             env:
               GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
             with:
-              tag_name: ${{ steps.grab-version.outputs.VERSION }}
-              release_name: v${{ steps.grab-version.outputs.VERSION }}
+              tag_name: ${{ env.VERSION }}
+              release_name: v${{ env.VERSION }}
               draft: false
               prerelease: false
               body_path: CHANGELOG.md
@@ -49,7 +49,7 @@ jobs:
               # https://github.com/GreenTF/upload-thunderstore-package/issues/24 claims that the zip file will fill in the version and name.
               name: ""
               version: ""
-              file: ${{ steps.find-zip.outputs.ZIP_FILE }}
+              file: ${{ env.ZIP_FILE }}
               categories: |
                 "Modpacks",
                 "Tools",

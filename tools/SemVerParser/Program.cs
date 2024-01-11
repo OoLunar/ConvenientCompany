@@ -38,7 +38,7 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
             "README.md"
         ];
 
-        public static async Task<int> Main()
+        public static async Task<int> Main(string[] args)
         {
             Console.WriteLine($"Searching {ThisAssembly.Project.ProjectRoot} for modpack files...");
             IReadOnlyList<string> modpackFiles = FindModpackFiles();
@@ -64,7 +64,6 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
                 return 1;
             }
 
-            Console.WriteLine($"Checking for updates for {manifest.Dependencies.Count} mods...");
             IReadOnlyList<ThunderStoreMod>? dependencies = ParseDependencies(manifest);
             if (dependencies is null)
             {
@@ -79,6 +78,13 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
 
             IReadOnlyList<ThunderStoreMod> addedMods = GetAddedMods(dependencies);
             IReadOnlyList<ThunderStoreMod> removedMods = GetRemovedMods(dependencies);
+            if (args.Contains("--just-changelog"))
+            {
+                WriteChangelog(addedMods, removedMods, new Dictionary<ThunderStoreMod, Version>());
+                return 0;
+            }
+
+            Console.WriteLine($"Checking for updates for {manifest.Dependencies.Count} mods...");
             IReadOnlyDictionary<ThunderStoreMod, Version> updatedMods = await CheckForUpdatesAsync(dependencies);
             if (addedMods.Count == 0 && removedMods.Count == 0 && updatedMods.Count == 0)
             {
@@ -337,7 +343,7 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
 
             if (addedMods.Count == 0 && removedMods.Count == 0 && updatedDependencies.Count == 0)
             {
-                changelogBuilder.AppendLine("No changes made to the mods.");
+                changelogBuilder.AppendLine("No changes made to the modlist.");
             }
 
             using FileStream changelogStream = File.OpenWrite($"{ThisAssembly.Project.ProjectRoot}/CHANGELOG.md");

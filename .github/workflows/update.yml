@@ -22,10 +22,26 @@ jobs:
               dotnet-version: 8
           - name: Process commit
             run: dotnet run --project tools/SemVerParser/SemVerParser.csproj
+          - name: Commit if needed
+            run: tools/commit-if-needed.sh
           - name: Find Zip File
             id: find-zip
             run: echo ZIP_FILE="$(find . -name "*.zip" -print -quit)" >> $GITHUB_ENV
-          - uses: GreenTF/upload-thunderstore-package@v4.2
+          - name: Grab latest version
+            id: grab-version
+            run: echo VERSION="$(jq -r '.version_number' manifest.json)" >> $GITHUB_ENV
+          - name: Create GitHub Release
+            uses: actions/create-release@v1
+            env:
+              GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            with:
+              tag_name: ${{ steps.grab-version.outputs.VERSION }}
+              release_name: v${{ steps.grab-version.outputs.VERSION }}
+              draft: false
+              prerelease: false
+              body_path: CHANGELOG.md
+          - name: Upload to Thunderstore
+            uses: GreenTF/upload-thunderstore-package@v4.2
             with:
               token: ${{ secrets.THUNDERSTORE_TOKEN }}
               namespace: OoLunar

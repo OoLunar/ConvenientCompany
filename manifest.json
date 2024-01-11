@@ -4,8 +4,6 @@
   "website_url": "https://github.com/OoLunar/ConvenientCompany",
   "description": "A collection of quality of life mods for Lethal Company. Completely compatible with non-modded clients.",
   "dependencies": [
-    "CytraX-ChristmasJester-1.0.2",
-    "fivetoofive-DetailedScan-1.2.2",
     "5Bit-VoiceHUD-1.0.4",
     "AllToasters-QuickRestart-1.2.0",
     "AllToasters-SpectateEnemies-2.2.1",

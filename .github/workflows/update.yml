@@ -30,6 +30,12 @@ jobs:
           - name: Grab latest version
             id: grab-version
             run: echo VERSION="$(jq -r '.version_number' manifest.json)" >> $GITHUB_ENV
+          - name: Grab modpack name
+            id: grab-modpack-name
+            run: echo MODPACK_NAME="$(jq -r '.name' manifest.json)" >> $GITHUB_ENV
+          - name: Grab modpack description
+            id: grab-modpack-description
+            run: echo MODPACK_DESCRIPTION="$(jq -r '.description' manifest.json)" >> $GITHUB_ENV
           - name: Create GitHub Release
             uses: actions/create-release@v1
             env:
@@ -44,17 +50,18 @@ jobs:
             uses: GreenTF/upload-thunderstore-package@v4.2
             with:
               token: ${{ secrets.THUNDERSTORE_TOKEN }}
-              namespace: OoLunar
               community: lethal-company
+              repo: northstar.thunderstore.io
+              namespace: OoLunar
               # https://github.com/GreenTF/upload-thunderstore-package/issues/24 claims that the zip file will fill in the version and name.
-              name: ""
-              version: ""
+              name: ${{ env.MODPACK_NAME }}
+              description: ${{ env.MODPACK_DESCRIPTION }}
+              version: ${{ env.VERSION }}
               file: ${{ env.ZIP_FILE }}
               categories: |
-                "Modpacks",
-                "Tools",
-                "Audio",
-                "Client-side",
-                "TV",
-                "Videos",
-                "Posters"
+                modpacks,
+                tools,
+                audio,
+                clientside,
+                video,
+                poster

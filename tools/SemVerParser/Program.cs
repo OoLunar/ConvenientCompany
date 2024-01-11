@@ -235,8 +235,8 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
             StringBuilder changelogBuilder = new();
             if (addedMods.Count != 0)
             {
-                changelogBuilder.AppendLine("## Added Mods\n");
-                foreach (ThunderStoreMod mod in addedMods)
+                changelogBuilder.AppendLine("## Added Mods");
+                foreach (ThunderStoreMod mod in addedMods.OrderBy(mod => mod.ModName, StringComparer.OrdinalIgnoreCase))
                 {
                     changelogBuilder.AppendLine($"- `{mod.ModName}` by `{mod.Author}` at `{mod.Version}`");
                 }
@@ -247,7 +247,7 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
             if (removedMods.Count != 0)
             {
                 changelogBuilder.AppendLine("## Removed Mods");
-                foreach (ThunderStoreMod mod in removedMods)
+                foreach (ThunderStoreMod mod in removedMods.OrderBy(mod => mod.ModName, StringComparer.OrdinalIgnoreCase))
                 {
                     changelogBuilder.AppendLine($"- `{mod.ModName}` by `{mod.Author}` at `{mod.Version}`");
                 }

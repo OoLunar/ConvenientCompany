@@ -13,30 +13,40 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
 
         public static IReadOnlyList<ThunderStoreMod> GetLastPublishedModList()
         {
-            // Compare latest commit to the last commit
-            Commit headCommit = _repository.Head.Tip;
-            Commit lastTag = _repository.Tags
-                .OrderByDescending(tag => tag.Target.Peel<Commit>().Author.When)
-                .First(tag => tag.Target.Peel<Commit>().Author.When < headCommit.Author.When)
-                .Target.Peel<Commit>();
+            // Compare latest commit to the latest tag.
+            Commit latestCommit = _repository.Head.Tip;
+            Commit? latestTag = null;
+            foreach (Tag tag in _repository.Tags)
+            {
+                // Ensure the tag is a commit and that it is older than the head commit.
+                // Also ensure that the tag is newer than the last found tag.
+                if (tag.Target is Commit commit
+                    && commit.Author.When < latestCommit.Author.When
+                    && (latestTag is null || commit.Author.When > latestTag.Author.When))
+                {
+                    latestTag = commit;
+                }
+            }
 
-            TreeChanges treeChanges = _repository.Diff.Compare<TreeChanges>(lastTag.Tree, headCommit.Tree);
+            // If no tag was found, return an empty list.
+            // This means that no mods were removed or updated.
+            if (latestTag is null)
+            {
+                return [];
+            }
 
             // Compare the old manifest file to the new one.
             ThunderStoreManifest manifest = JsonSerializer
-                .Deserialize<ThunderStoreManifest>(((Blob)lastTag["manifest.json"].Target).GetContentText(), Program.JsonSerializerDefaults)
-                .ExpectNullable($"Unable to parse manifest file on tag {lastTag.Id}.");
+                .Deserialize<ThunderStoreManifest>(((Blob)latestTag["manifest.json"].Target).GetContentText(), Program.JsonSerializerDefaults)
+                .NullPanic($"Unable to parse manifest file on tag {latestTag.Id}.");
 
             // And then parse the dependencies from the new manifest file.
-            return Program.ParseDependencies(manifest)
-                .ExpectNullable($"Unable to parse dependencies from manifest file on tag {lastTag.Id}.")
-                .OrderByDescending(mod => mod.ModName, StringComparer.OrdinalIgnoreCase)
-                .ToList();
+            return Program.ParseDependencies(manifest).NullPanic($"Unable to parse dependencies from manifest file on tag {latestTag.Id}.");
         }
 
         // If the new dependencies contain a mod that is not in the old dependencies, it was added.
-        public static IReadOnlyList<ThunderStoreMod> GetAddedMods(IReadOnlyList<ThunderStoreMod> dependencies) => GetLastPublishedModList()
-            .Where(oldMod => !dependencies.Any(mod => mod.Author == oldMod.Author && mod.ModName == oldMod.ModName))
+        public static IReadOnlyList<ThunderStoreMod> GetAddedMods(IReadOnlyList<ThunderStoreMod> dependencies) => dependencies
+            .Except(GetLastPublishedModList(), new ThunderStoreModEqualityComparer())
             .ToList();
 
         // If the old dependencies contain a mod that is not in the new dependencies, it was removed.

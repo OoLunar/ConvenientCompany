@@ -9,21 +9,19 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-using LibGit2Sharp;
-using Version = System.Version;
 
 namespace OoLunar.ConvenientCompany.Tools.SemVerParser
 {
     public static class Program
     {
-        private const string _manifestFile = ThisAssembly.Project.ProjectRoot + "/manifest.json";
-        private static readonly JsonSerializerOptions _jsonSerializerDefaults = new(JsonSerializerDefaults.Web)
+        public const string ManifestFile = ThisAssembly.Project.ProjectRoot + "/manifest.json";
+        public static readonly JsonSerializerOptions JsonSerializerDefaults = new(System.Text.Json.JsonSerializerDefaults.Web)
         {
             PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
             WriteIndented = true
         };
 
-        private static readonly HttpClient _httpClient = new()
+        public static readonly HttpClient HttpClient = new()
         {
             DefaultRequestHeaders =
             {
@@ -31,7 +29,7 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
             }
         };
 
-        private static readonly string[] _projectFiles = [
+        public static readonly string[] ProjectFiles = [
             "icon.png",
             "LICENSE",
             "manifest.json",
@@ -55,8 +53,8 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
             }
 
             Console.WriteLine("Parsing mod list...");
-            FileStream manifestStream = File.OpenRead(_manifestFile);
-            ThunderStoreManifest? manifest = JsonSerializer.Deserialize<ThunderStoreManifest>(manifestStream, _jsonSerializerDefaults);
+            FileStream manifestStream = File.OpenRead(ManifestFile);
+            ThunderStoreManifest? manifest = JsonSerializer.Deserialize<ThunderStoreManifest>(manifestStream, JsonSerializerDefaults);
             await manifestStream.DisposeAsync();
             if (manifest is null)
             {
@@ -76,11 +74,11 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
                 return 0;
             }
 
-            IReadOnlyList<ThunderStoreMod> addedMods = GetAddedMods(dependencies);
-            IReadOnlyList<ThunderStoreMod> removedMods = GetRemovedMods(dependencies);
+            IReadOnlyList<ThunderStoreMod> addedMods = GitTools.GetAddedMods(dependencies);
+            IReadOnlyList<ThunderStoreMod> removedMods = GitTools.GetRemovedMods(dependencies);
             if (args.Contains("--just-changelog"))
             {
-                IReadOnlyDictionary<ThunderStoreMod, Version> localModUpdates = GetLocalModUpdates(dependencies);
+                IReadOnlyDictionary<ThunderStoreMod, Version> localModUpdates = GitTools.GetLocalModUpdates(dependencies);
                 WriteChangelog(addedMods, removedMods, localModUpdates);
                 return 0;
             }
@@ -125,12 +123,12 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
             return 0;
         }
 
-        private static IReadOnlyList<string> FindModpackFiles()
+        public static IReadOnlyList<string> FindModpackFiles()
         {
             List<string> projectFiles = [];
             foreach (string fileName in Directory.GetFiles(ThisAssembly.Project.ProjectRoot))
             {
-                if (_projectFiles.Contains(Path.GetFileName(fileName)))
+                if (ProjectFiles.Contains(Path.GetFileName(fileName)))
                 {
                     projectFiles.Add(fileName);
                 }
@@ -139,7 +137,7 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
             return projectFiles;
         }
 
-        private static IReadOnlyList<ThunderStoreMod>? ParseDependencies(ThunderStoreManifest manifest)
+        public static IReadOnlyList<ThunderStoreMod>? ParseDependencies(ThunderStoreManifest manifest)
         {
             List<ThunderStoreMod> dependencies = [];
             foreach (string dependency in manifest.Dependencies)
@@ -162,134 +160,7 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
             return dependencies;
         }
 
-        private static IReadOnlyList<ThunderStoreMod> GetAddedMods(IReadOnlyList<ThunderStoreMod> dependencies)
-        {
-            List<ThunderStoreMod> addedMods = [];
-            Repository repository = new(ThisAssembly.Project.ProjectRoot + "/.git");
-
-            // Compare latest commit to the last commit
-            Commit latestCommit = repository.Head.Tip;
-            Commit lastCommit = latestCommit.Parents.First();
-            TreeChanges treeChanges = repository.Diff.Compare<TreeChanges>(lastCommit.Tree, latestCommit.Tree);
-
-            // Check to see if the manifest file has changed.
-            if (!treeChanges.Any(change => change.Path == "manifest.json"))
-            {
-                return addedMods;
-            }
-
-            // If it has, we need to compare the old manifest file to the new one.
-            ThunderStoreManifest? manifest = JsonSerializer.Deserialize<ThunderStoreManifest>(((Blob)lastCommit["manifest.json"].Target).GetContentText(), _jsonSerializerDefaults);
-            if (manifest is null)
-            {
-                Console.WriteLine("Unable to parse old manifest file.");
-                return [];
-            }
-
-            // And then parse the dependencies from the new manifest file.
-            IReadOnlyList<ThunderStoreMod>? oldDependencies = ParseDependencies(manifest);
-            if (oldDependencies is null)
-            {
-                Console.WriteLine("Unable to parse dependencies.");
-                return [];
-            }
-
-            // Finally, compare the old dependencies to the new ones to find the added mods.
-            addedMods.AddRange(dependencies.Where(mod => oldDependencies.All(oldMod => mod.Author != oldMod.Author && mod.ModName != oldMod.ModName)));
-
-            return addedMods;
-        }
-
-        private static IReadOnlyList<ThunderStoreMod> GetRemovedMods(IReadOnlyList<ThunderStoreMod> dependencies)
-        {
-            List<ThunderStoreMod> removedMods = [];
-            Repository repository = new(ThisAssembly.Project.ProjectRoot + "/.git");
-
-            // Compare latest commit to the last commit
-            Commit latestCommit = repository.Head.Tip;
-            Commit lastCommit = latestCommit.Parents.First();
-            TreeChanges treeChanges = repository.Diff.Compare<TreeChanges>(lastCommit.Tree, latestCommit.Tree);
-
-            // Check to see if the manifest file has changed.
-            if (!treeChanges.Any(change => change.Path == "manifest.json"))
-            {
-                return removedMods;
-            }
-
-            // If it has, we need to compare the old manifest file to the new one.
-            ThunderStoreManifest? manifest = JsonSerializer.Deserialize<ThunderStoreManifest>(((Blob)lastCommit["manifest.json"].Target).GetContentText(), _jsonSerializerDefaults);
-            if (manifest is null)
-            {
-                Console.WriteLine("Unable to parse old manifest file.");
-                return new List<ThunderStoreMod>();
-            }
-
-            // And then parse the dependencies from the old manifest file.
-            IReadOnlyList<ThunderStoreMod>? oldDependencies = ParseDependencies(manifest);
-            if (oldDependencies is null)
-            {
-                Console.WriteLine("Unable to parse dependencies.");
-                return new List<ThunderStoreMod>();
-            }
-
-            // Finally, compare the new dependencies to the old ones to find the removed mods.
-            removedMods.AddRange(oldDependencies.Where(oldMod => dependencies.All(mod => mod.Author != oldMod.Author && mod.ModName != oldMod.ModName)));
-
-            return removedMods;
-        }
-
-        private static Dictionary<ThunderStoreMod, Version> GetLocalModUpdates(IReadOnlyList<ThunderStoreMod> dependencies)
-        {
-            Repository repository = new(ThisAssembly.Project.ProjectRoot + "/.git");
-
-            // Compare latest commit to the lastest tag
-            Commit latestCommit = repository.Head.Tip;
-            Commit lastCommit = repository.Tags.OrderByDescending(tag => tag.Target.Peel<Commit>().Author.When).First(tag => tag.Target.Peel<Commit>().Author.When < latestCommit.Author.When).Target.Peel<Commit>();
-            TreeChanges treeChanges = repository.Diff.Compare<TreeChanges>(lastCommit.Tree, latestCommit.Tree);
-
-            // Check to see if the manifest file has changed.
-            if (!treeChanges.Any(change => change.Path == "manifest.json"))
-            {
-                return [];
-            }
-
-            // If it has, we need to compare the old manifest file to the new one.
-            ThunderStoreManifest? manifest = JsonSerializer.Deserialize<ThunderStoreManifest>(((Blob)lastCommit["manifest.json"].Target).GetContentText(), _jsonSerializerDefaults);
-            if (manifest is null)
-            {
-                Console.WriteLine("Unable to parse old manifest file.");
-                return [];
-            }
-
-            // And then parse the dependencies from the old manifest file.
-            IReadOnlyList<ThunderStoreMod>? oldDependencies = ParseDependencies(manifest);
-            if (oldDependencies is null)
-            {
-                Console.WriteLine("Unable to parse dependencies.");
-                return [];
-            }
-
-            // Finally, compare the new dependencies to the old ones to find the updated mods.
-            // The dictionary will contain the old mod while the value will contain the new version.
-            Dictionary<ThunderStoreMod, Version> modUpdates = [];
-            foreach (ThunderStoreMod mod in dependencies)
-            {
-                ThunderStoreMod? oldMod = oldDependencies.FirstOrDefault(oldMod => oldMod.Author == mod.Author && oldMod.ModName == mod.ModName);
-                if (oldMod is null)
-                {
-                    continue;
-                }
-
-                if (mod.Version != oldMod.Version)
-                {
-                    modUpdates.Add(oldMod, mod.Version);
-                }
-            }
-
-            return modUpdates;
-        }
-
-        private static async ValueTask<Dictionary<ThunderStoreMod, Version>> CheckForUpdatesAsync(IReadOnlyList<ThunderStoreMod> mods)
+        public static async ValueTask<Dictionary<ThunderStoreMod, Version>> CheckForUpdatesAsync(IReadOnlyList<ThunderStoreMod> mods)
         {
             Dictionary<ThunderStoreMod, Version> modUpdates = [];
             foreach (ThunderStoreMod mod in mods)
@@ -297,7 +168,7 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
                 HttpResponseMessage responseMessage;
                 do
                 {
-                    responseMessage = await _httpClient.GetAsync($"https://thunderstore.io/api/experimental/package/{mod.Author}/{mod.ModName}/");
+                    responseMessage = await HttpClient.GetAsync($"https://thunderstore.io/api/experimental/package/{mod.Author}/{mod.ModName}/");
                     if (responseMessage.StatusCode == HttpStatusCode.TooManyRequests)
                     {
                         Console.WriteLine("Hit the ratelimit. Waiting 15 seconds...");
@@ -305,7 +176,7 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
                     }
                 } while (responseMessage.StatusCode == HttpStatusCode.TooManyRequests);
 
-                ThunderStorePackageListing? packageListing = await responseMessage.Content.ReadFromJsonAsync<ThunderStorePackageListing>(_jsonSerializerDefaults);
+                ThunderStorePackageListing? packageListing = await responseMessage.Content.ReadFromJsonAsync<ThunderStorePackageListing>(JsonSerializerDefaults);
                 if (packageListing is null)
                 {
                     Console.WriteLine($"Unable to find mod {mod.ModName} by {mod.Author} on ThunderStore. Skipping update check.");
@@ -324,7 +195,7 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
             return modUpdates;
         }
 
-        private static Version BumpVersion(Version modpackVersion, IReadOnlyList<ThunderStoreMod> addedMods, IReadOnlyList<ThunderStoreMod> removedMods, IReadOnlyDictionary<ThunderStoreMod, Version> modUpdates)
+        public static Version BumpVersion(Version modpackVersion, IReadOnlyList<ThunderStoreMod> addedMods, IReadOnlyList<ThunderStoreMod> removedMods, IReadOnlyDictionary<ThunderStoreMod, Version> modUpdates)
         {
             if (addedMods.Count != 0 || removedMods.Count != 0)
             {
@@ -342,9 +213,9 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
             return new Version(modpackVersion.Major, modpackVersion.Minor, modpackVersion.Build + 1);
         }
 
-        private static void UpdateManifestFile(ThunderStoreManifest manifest, Version updatedModpackVersion, IReadOnlyList<string> updatedDependencies)
+        public static void UpdateManifestFile(ThunderStoreManifest manifest, Version updatedModpackVersion, IReadOnlyList<string> updatedDependencies)
         {
-            using FileStream manifestStream = File.Open(_manifestFile, FileMode.Open, FileAccess.ReadWrite, FileShare.Read);
+            using FileStream manifestStream = File.Open(ManifestFile, FileMode.Open, FileAccess.ReadWrite, FileShare.Read);
 
             // Clear the contents of the file.
             manifestStream.SetLength(0);
@@ -356,10 +227,10 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
                 Dependencies = updatedDependencies
             };
 
-            JsonSerializer.Serialize(manifestStream, manifest, _jsonSerializerDefaults);
+            JsonSerializer.Serialize(manifestStream, manifest, JsonSerializerDefaults);
         }
 
-        private static void WriteChangelog(IReadOnlyList<ThunderStoreMod> addedMods, IReadOnlyList<ThunderStoreMod> removedMods, IReadOnlyDictionary<ThunderStoreMod, Version> updatedDependencies)
+        public static void WriteChangelog(IReadOnlyList<ThunderStoreMod> addedMods, IReadOnlyList<ThunderStoreMod> removedMods, IReadOnlyDictionary<ThunderStoreMod, Version> updatedDependencies)
         {
             StringBuilder changelogBuilder = new();
             if (addedMods.Count != 0)
@@ -403,7 +274,7 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
             changelogStream.Write(Encoding.UTF8.GetBytes(changelogBuilder.ToString()));
         }
 
-        private static void GenerateModpackFile(ThunderStoreManifest manifest, Version updatedModpackVersion, IReadOnlyList<string> modpackFiles)
+        public static void GenerateModpackFile(ThunderStoreManifest manifest, Version updatedModpackVersion, IReadOnlyList<string> modpackFiles)
         {
             string modpackFileName = $"{ThisAssembly.Project.ProjectRoot}/{manifest.Name}-{updatedModpackVersion}.zip";
             if (File.Exists(modpackFileName))

@@ -80,7 +80,8 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
             IReadOnlyList<ThunderStoreMod> removedMods = GetRemovedMods(dependencies);
             if (args.Contains("--just-changelog"))
             {
-                WriteChangelog(addedMods, removedMods, new Dictionary<ThunderStoreMod, Version>());
+                IReadOnlyDictionary<ThunderStoreMod, Version> localModUpdates = GetLocalModUpdates(dependencies);
+                WriteChangelog(addedMods, removedMods, localModUpdates);
                 return 0;
             }
 
@@ -235,6 +236,57 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
             removedMods.AddRange(oldDependencies.Where(oldMod => dependencies.All(mod => mod.Author != oldMod.Author && mod.ModName != oldMod.ModName)));
 
             return removedMods;
+        }
+
+        private static Dictionary<ThunderStoreMod, Version> GetLocalModUpdates(IReadOnlyList<ThunderStoreMod> dependencies)
+        {
+            Repository repository = new(ThisAssembly.Project.ProjectRoot + "/.git");
+
+            // Compare latest commit to the lastest tag
+            Commit latestCommit = repository.Head.Tip;
+            Commit lastCommit = repository.Tags.OrderByDescending(tag => tag.Target.Peel<Commit>().Author.When).First(tag => tag.Target.Peel<Commit>().Author.When < latestCommit.Author.When).Target.Peel<Commit>();
+            TreeChanges treeChanges = repository.Diff.Compare<TreeChanges>(lastCommit.Tree, latestCommit.Tree);
+
+            // Check to see if the manifest file has changed.
+            if (!treeChanges.Any(change => change.Path == "manifest.json"))
+            {
+                return [];
+            }
+
+            // If it has, we need to compare the old manifest file to the new one.
+            ThunderStoreManifest? manifest = JsonSerializer.Deserialize<ThunderStoreManifest>(((Blob)lastCommit["manifest.json"].Target).GetContentText(), _jsonSerializerDefaults);
+            if (manifest is null)
+            {
+                Console.WriteLine("Unable to parse old manifest file.");
+                return [];
+            }
+
+            // And then parse the dependencies from the old manifest file.
+            IReadOnlyList<ThunderStoreMod>? oldDependencies = ParseDependencies(manifest);
+            if (oldDependencies is null)
+            {
+                Console.WriteLine("Unable to parse dependencies.");
+                return [];
+            }
+
+            // Finally, compare the new dependencies to the old ones to find the updated mods.
+            // The dictionary will contain the old mod while the value will contain the new version.
+            Dictionary<ThunderStoreMod, Version> modUpdates = [];
+            foreach (ThunderStoreMod mod in dependencies)
+            {
+                ThunderStoreMod? oldMod = oldDependencies.FirstOrDefault(oldMod => oldMod.Author == mod.Author && oldMod.ModName == mod.ModName);
+                if (oldMod is null)
+                {
+                    continue;
+                }
+
+                if (mod.Version != oldMod.Version)
+                {
+                    modUpdates.Add(oldMod, mod.Version);
+                }
+            }
+
+            return modUpdates;
         }
 
         private static async ValueTask<Dictionary<ThunderStoreMod, Version>> CheckForUpdatesAsync(IReadOnlyList<ThunderStoreMod> mods)

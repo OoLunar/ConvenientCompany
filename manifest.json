@@ -1,6 +1,6 @@
 {
   "name": "ConvenientCompany",
-  "version_number": "1.3.0",
+  "version_number": "1.3.1",
   "website_url": "https://github.com/OoLunar/ConvenientCompany",
   "description": "A collection of quality of life mods for Lethal Company. Completely compatible with non-modded clients.",
   "dependencies": [
@@ -14,7 +14,7 @@
     "ATK-ShipClock-0.9.0",
     "BepInEx-BepInExPack-5.4.2100",
     "boxofbiscuits97-QuotaRollover-2.1.0",
-    "Drakorle-MoreItems-1.0.1",
+    "Drakorle-MoreItems-1.0.2",
     "extraes-LethalLoudnessMeter-1.0.1",
     "femboytv-BoykisserPosters-1.2.1",
     "femboytv-LethalPaintings-1.2.0",

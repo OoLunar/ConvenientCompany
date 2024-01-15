@@ -29,7 +29,13 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
             modStatuses = await ThunderStoreTools.CheckForRemoteUpdatesAsync(modStatuses);
 
             // Bump either the minor or patch version of the modpack. Major bumps must be done manually.
-            Version updatedModpackVersion = BumpVersion(manifest.VersionNumber, modStatuses);
+            Version updatedModpackVersion = BumpVersion(manifest, GitTools.GetLastPublishedManifest()!, modStatuses);
+            if (manifest.VersionNumber == updatedModpackVersion)
+            {
+                Console.WriteLine("No updates found. Exiting...");
+                return 0;
+            }
+
             Console.WriteLine($"Found updates. Updating modpack from {manifest.VersionNumber} to {updatedModpackVersion}...");
             FileTools.UpdateManifestFile(manifest, updatedModpackVersion, modStatuses
                 .Where(x => x.Value is not LocalModAction.Uninstall)
@@ -48,8 +54,13 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
             return 0;
         }
 
-        private static Version BumpVersion(Version modpackVersion, IReadOnlyDictionary<LocalMod, LocalModAction> modStatuses)
+        private static Version BumpVersion(ThunderStoreManifest currentManifest, ThunderStoreManifest lastPublishedManifest, IReadOnlyDictionary<LocalMod, LocalModAction> modStatuses)
         {
+            if (currentManifest.Dependencies.SequenceEqual(lastPublishedManifest.Dependencies))
+            {
+                return currentManifest.VersionNumber;
+            }
+
             foreach ((LocalMod mod, LocalModAction action) in modStatuses)
             {
                 if (action == LocalModAction.Install
@@ -57,11 +68,11 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
                     || mod.LatestVersion?.Major != mod.Version.Major // *1*.2.0
                     || mod.LatestVersion?.Minor != mod.Version.Minor) // 1.*2*.0
                 {
-                    return new Version(modpackVersion.Major, modpackVersion.Minor + 1, 0);
+                    return new Version(currentManifest.VersionNumber.Major, currentManifest.VersionNumber.Minor + 1, 0);
                 }
             }
 
-            return new Version(modpackVersion.Major, modpackVersion.Minor, modpackVersion.Build + 1);
+            return new Version(currentManifest.VersionNumber.Major, currentManifest.VersionNumber.Minor, currentManifest.VersionNumber.Build + 1);
         }
     }
 }

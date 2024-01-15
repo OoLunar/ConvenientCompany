@@ -8,11 +8,11 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
     {
         public static readonly Repository _repository = new(ThisAssembly.Project.ProjectRoot + "/.git");
 
-        public static ThunderStoreManifest? GetLastPublishedManifest()
+        public static ThunderStoreManifest? GetLastPublishedManifest(string? fromTag = null)
         {
             // Compare latest commit to the latest tag.
             Commit? latestTag = null;
-            Commit latestCommit = _repository.Head.Tip;
+            Commit latestCommit = fromTag is not null ? _repository.Tags[fromTag].Target.Peel<Commit>() : _repository.Head.Tip;
             foreach (Tag tag in _repository.Tags)
             {
                 // Ensure the tag is a commit and that it is older than the head commit.

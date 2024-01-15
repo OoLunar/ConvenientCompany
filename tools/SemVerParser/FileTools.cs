@@ -21,11 +21,11 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
             "README.md"
         ];
 
-        public static async ValueTask<ThunderStoreManifest> ParseManifestFileAsync()
+        public static ThunderStoreManifest ParseManifestFile()
         {
             try
             {
-                await using FileStream manifestStream = File.OpenRead(MANIFEST_FILE);
+                using FileStream manifestStream = File.OpenRead(MANIFEST_FILE);
                 return JsonSerializer
                     .Deserialize<ThunderStoreManifest>(manifestStream, Program.JsonSerializerDefaults)
                     .NullPanic("Unable to parse manifest file.");
@@ -49,7 +49,7 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
             manifest = manifest with
             {
                 VersionNumber = updatedModpackVersion,
-                Dependencies = updatedDependencies.OrderBy(x => x.Author, StringComparer.OrdinalIgnoreCase).ToList()
+                Dependencies = updatedDependencies
             };
 
             JsonSerializer.Serialize(manifestStream, manifest, Program.JsonSerializerDefaults);

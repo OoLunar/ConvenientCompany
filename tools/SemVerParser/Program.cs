@@ -18,7 +18,7 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
 
         public static async Task<int> Main(string[] args)
         {
-            ThunderStoreManifest manifest = await FileTools.ParseManifestFileAsync();
+            ThunderStoreManifest manifest = FileTools.ParseManifestFile();
             IReadOnlyDictionary<LocalMod, LocalModAction> modStatuses = ThunderStoreTools.GetLocalModDiff(manifest, GitTools.GetLastPublishedManifest());
             if (args.Contains("--just-changelog"))
             {
@@ -31,7 +31,12 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
             // Bump either the minor or patch version of the modpack. Major bumps must be done manually.
             Version updatedModpackVersion = BumpVersion(manifest.VersionNumber, modStatuses);
             Console.WriteLine($"Found updates. Updating modpack from {manifest.VersionNumber} to {updatedModpackVersion}...");
-            FileTools.UpdateManifestFile(manifest, updatedModpackVersion, modStatuses.Keys.ToList());
+            FileTools.UpdateManifestFile(manifest, updatedModpackVersion, modStatuses
+                .Where(x => x.Value is not LocalModAction.Uninstall)
+                .Select(x => x.Key)
+                .OrderBy(x => x.Author, StringComparer.OrdinalIgnoreCase)
+                .ToList()
+            );
             FileTools.WriteChangelog(modStatuses);
             FileTools.GenerateModpackFile(manifest, updatedModpackVersion);
 

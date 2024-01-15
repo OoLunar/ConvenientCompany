@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace OoLunar.ConvenientCompany.Tools.SemVerParser
+namespace OoLunar.ConvenientCompany.Tools.SemVerParser.Entities.Api
 {
     public sealed record ThunderStoreManifest
     {
@@ -9,6 +9,6 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
         public required Version VersionNumber { get; init; }
         public required Uri WebsiteUrl { get; init; }
         public required string Description { get; init; }
-        public required IReadOnlyList<string> Dependencies { get; init; }
+        public required IReadOnlyList<LocalMod> Dependencies { get; init; }
     }
 }

@@ -41,7 +41,7 @@ jobs:
             continue-on-error: true
             run: git ls-remote --exit-code --tags origin "${{ env.VERSION }}"
           - name: Create GitHub Release
-            if: steps.should-release.outcome == 'success'
+            if: steps.should-release.outcome == 'failure'
             uses: actions/create-release@v1
             env:
               GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

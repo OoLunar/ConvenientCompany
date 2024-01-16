@@ -29,7 +29,7 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
             modStatuses = await ThunderStoreTools.CheckForRemoteUpdatesAsync(modStatuses);
 
             // Bump either the minor or patch version of the modpack. Major bumps must be done manually.
-            Version updatedModpackVersion = BumpVersion(modStatuses, manifest, GitTools.GetLastPublishedManifest());
+            Version updatedModpackVersion = BumpVersion(modStatuses, manifest, GitTools.GetLastCommitManifest());
             if (manifest.VersionNumber == updatedModpackVersion)
             {
                 Console.WriteLine("No updates found. Exiting...");
@@ -56,7 +56,7 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
 
         private static Version BumpVersion(IReadOnlyDictionary<LocalMod, LocalModAction> modStatuses, ThunderStoreManifest currentManifest, ThunderStoreManifest? lastPublishedManifest = null)
         {
-            if (lastPublishedManifest is not null && currentManifest.Dependencies.SequenceEqual(lastPublishedManifest.Dependencies))
+            if (lastPublishedManifest is not null && currentManifest.Dependencies.SequenceEqual(lastPublishedManifest.Dependencies, LocalModVersionEqualityComparer.Instance))
             {
                 return currentManifest.VersionNumber;
             }

@@ -8,11 +8,11 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
     {
         public static readonly Repository _repository = new(ThisAssembly.Project.ProjectRoot + "/.git");
 
-        public static ThunderStoreManifest? GetLastPublishedManifest(string? fromTag = null)
+        public static ThunderStoreManifest? GetLastPublishedManifest()
         {
             // Compare latest commit to the latest tag.
             Commit? latestTag = null;
-            Commit latestCommit = fromTag is not null ? _repository.Tags[fromTag].Target.Peel<Commit>() : _repository.Head.Tip;
+            Commit latestCommit = _repository.Head.Tip;
             foreach (Tag tag in _repository.Tags)
             {
                 // Ensure the tag is a commit and that it is older than the head commit.
@@ -34,8 +34,16 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
 
             // Compare the old manifest file to the new one.
             return JsonSerializer
-                .Deserialize<ThunderStoreManifest>(((Blob)latestTag["manifest.json"].Target).GetContentText(), Program.JsonSerializerDefaults)
+                .Deserialize<ThunderStoreManifest>(latestTag["manifest.json"].Target.Peel<Blob>().GetContentText(), Program.JsonSerializerDefaults)
                 .NullPanic($"Unable to parse manifest file on tag {latestTag.Id}.");
+        }
+
+        public static ThunderStoreManifest? GetLastCommitManifest()
+        {
+            Commit latestCommit = _repository.Head.Tip;
+            return JsonSerializer
+                .Deserialize<ThunderStoreManifest>(latestCommit["manifest.json"].Target.Peel<Blob>().GetContentText(), Program.JsonSerializerDefaults)
+                .NullPanic($"Unable to parse manifest file on commit {latestCommit.Id}.");
         }
     }
 }

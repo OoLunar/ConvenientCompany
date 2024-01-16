@@ -52,7 +52,7 @@ jobs:
               prerelease: false
               body_path: CHANGELOG.md
           - name: Upload to Thunderstore
-            if: steps.should-release.outcome == 'success'
+            if: steps.should-release.outcome == 'failure'
             uses: GreenTF/upload-thunderstore-package@v4.2
             with:
               token: ${{ secrets.THUNDERSTORE_TOKEN }}

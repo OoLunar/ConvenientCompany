@@ -1,6 +1,6 @@
 {
   "name": "ConvenientCompany",
-  "version_number": "1.5.0",
+  "version_number": "1.6.0",
   "website_url": "https://github.com/OoLunar/ConvenientCompany",
   "description": "A collection of quality of life mods for Lethal Company. Completely compatible with non-modded clients.",
   "dependencies": [
@@ -38,12 +38,12 @@
     "Ozone-Glow_Steps-1.1.2",
     "Piggy-JesterStompShake-1.0.8",
     "pineapple3333-Jester_Sound_My_Way-1.0.5",
-    "Pooble-LCBetterSaves-1.7.0",
+    "Pooble-LCBetterSaves-1.7.2",
     "quackandcheese-ToggleMute-1.3.0",
     "Rattenbonkers-Teleporter_Cooldown_Reset-1.0.1",
     "red_eye-LethalAutocomplete-0.4.1",
     "Renegades-FlashlightToggle-1.5.0",
-    "Renegades-WalkieUse-1.4.0",
+    "Renegades-WalkieUse-1.5.0",
     "Rune580-LethalCompany_InputUtils-0.5.5",
     "Ryokune-CompatibilityChecker-1.1.6",
     "ShaosilGaming-FlashlightFix-1.0.5",
@@ -54,6 +54,6 @@
     "tinyhoot-ShipLobby-1.0.2",
     "tinyhoot-ShipLoot-1.0.0",
     "TwinDimensionalProductions-CoilHeadStare-1.0.3",
-    "zoomstv-FasterRocket-1.0.0"
+    "zoomstv-FasterRocket-1.0.1"
   ]
 }

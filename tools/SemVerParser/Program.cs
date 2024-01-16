@@ -30,13 +30,11 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
 
             // Bump either the minor or patch version of the modpack. Major bumps must be done manually.
             Version updatedModpackVersion = BumpVersion(modStatuses, manifest, GitTools.GetLastCommitManifest());
-            if (manifest.VersionNumber == updatedModpackVersion)
-            {
-                Console.WriteLine("No updates found. Exiting...");
-                return 0;
-            }
+            Console.WriteLine(manifest.VersionNumber == updatedModpackVersion
+                ? "No updates found."
+                : $"Found updates. Updating modpack from {manifest.VersionNumber} to {updatedModpackVersion}..."
+            );
 
-            Console.WriteLine($"Found updates. Updating modpack from {manifest.VersionNumber} to {updatedModpackVersion}...");
             FileTools.UpdateManifestFile(manifest, updatedModpackVersion, modStatuses
                 .Where(x => x.Value is not LocalModAction.Uninstall)
                 .Select(x => x.Key)

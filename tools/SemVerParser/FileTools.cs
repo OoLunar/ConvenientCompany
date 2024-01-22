@@ -96,24 +96,33 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
                             {
                                 continue;
                             }
-                            else if ((await ThunderStoreTools.GetChangelogAsync(mod)) is ThunderStoreChangelogResponse changelogResponse && !string.IsNullOrWhiteSpace(changelogResponse.Markdown))
+                            else if ((await ThunderStoreTools.GetChangelogAsync(mod)) is ThunderStoreChangelogOrReadMeResponse changelogResponse && !string.IsNullOrWhiteSpace(changelogResponse.Markdown))
                             {
                                 changelogBuilder.AppendLine($"- `{mod.ModName}` by `{mod.Author}` from `{mod.Version}` to [`{mod.LatestVersion}`](https://thunderstore.io/c/lethal-company/p/{mod.Author}/{mod.ModName}/changelog/)");
                                 ParseChangelogFile(mod, changelogResponse.Markdown, changelogBuilder);
                             }
+                            else if ((await ThunderStoreTools.GetReadMeAsync(mod)) is ThunderStoreChangelogOrReadMeResponse readMeResponse && !string.IsNullOrWhiteSpace(readMeResponse.Markdown))
+                            {
+                                changelogBuilder.AppendLine($"- `{mod.ModName}` by `{mod.Author}` from `{mod.Version}` to [`{mod.LatestVersion}`](https://thunderstore.io/c/lethal-company/p/{mod.Author}/{mod.ModName}/)");
+                                ParseChangelogFile(mod, readMeResponse.Markdown, changelogBuilder);
+                            }
                             else if ((await ThunderStoreTools.GetWebsiteUrlAsync(mod)) is Uri websiteUrl && (await GitTools.GetReleaseAsync(websiteUrl, mod.LatestVersion)) is (Uri releaseUrl, string releaseBody))
                             {
                                 changelogBuilder.AppendLine($"- `{mod.ModName}` by `{mod.Author}` from `{mod.Version}` to [`{mod.LatestVersion}`]({releaseUrl})");
-                                changelogBuilder.AppendLine(string.IsNullOrWhiteSpace(releaseBody)
-                                    ? "\t> No changelog was provided."
-                                    : $"\t> {releaseBody}"
-                                );
+                                if (!string.IsNullOrWhiteSpace(releaseBody))
+                                {
+                                    ParseChangelogFile(mod, releaseBody, changelogBuilder);
+                                }
+                                else
+                                {
+                                    changelogBuilder.AppendLine("\t> No changelog was provided.");
+                                }
                             }
                             else
                             {
                                 // We were unable to parse the changelog - likely because it was put somewhere unconventional. Like on the README.
                                 changelogBuilder.AppendLine($"- `{mod.ModName}` by `{mod.Author}` from `{mod.Version}` to [`{mod.LatestVersion}`](https://thunderstore.io/c/lethal-company/p/{mod.Author}/{mod.ModName}/changelog/)");
-                                changelogBuilder.AppendLine("\t> No changelog was found.");
+                                changelogBuilder.AppendLine("\t> No changelog was provided.");
                             }
                         }
                     }
@@ -151,7 +160,7 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
         private static void ParseChangelogFile(LocalMod mod, string changelog, StringBuilder changelogBuilder)
         {
             StringBuilder changelogSectionBuilder = new();
-            string[] changelogLines = changelog.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            string[] changelogLines = changelog.Split('\n', StringSplitOptions.RemoveEmptyEntries);
             bool foundLatestVersionFirst = false;
             bool foundOldestVersionFirst = false;
             int latestVersionLine = 0;
@@ -198,7 +207,7 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
                 {
                     if (!string.IsNullOrWhiteSpace(line))
                     {
-                        changelogSectionBuilder.AppendLine($"\t> {line.Trim()}");
+                        changelogSectionBuilder.AppendLine($"\t> {line}");
                     }
                 }
             }
@@ -209,7 +218,7 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
                     string line = changelogLines[i];
                     if (!string.IsNullOrWhiteSpace(line))
                     {
-                        changelogSectionBuilder.AppendLine($"\t> {changelogLines[i].Trim()}");
+                        changelogSectionBuilder.AppendLine($"\t> {changelogLines[i]}");
                     }
                 }
             }

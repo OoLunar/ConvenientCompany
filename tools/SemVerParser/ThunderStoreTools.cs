@@ -205,11 +205,16 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
             return string.IsNullOrWhiteSpace(remoteMod?.Latest.WebsiteUrl) ? null : new(remoteMod.Latest.WebsiteUrl);
         }
 
-        public static async ValueTask<ThunderStoreChangelogResponse?> GetChangelogAsync(LocalMod localMod)
+        public static async ValueTask<ThunderStoreChangelogOrReadMeResponse?> GetChangelogAsync(LocalMod localMod)
         {
             HttpResponseMessage responseMessage = await _httpClient.GetAsync($"https://thunderstore.io/api/experimental/package/{localMod.Author}/{localMod.ModName}/{localMod.LatestVersion ?? localMod.Version}/changelog/");
-            responseMessage.EnsureSuccessStatusCode();
-            return await responseMessage.Content.ReadFromJsonAsync<ThunderStoreChangelogResponse>(Program.JsonSerializerDefaults);
+            return await responseMessage.Content.ReadFromJsonAsync<ThunderStoreChangelogOrReadMeResponse>(Program.JsonSerializerDefaults);
+        }
+
+        public static async ValueTask<ThunderStoreChangelogOrReadMeResponse?> GetReadMeAsync(LocalMod localMod)
+        {
+            HttpResponseMessage responseMessage = await _httpClient.GetAsync($"https://thunderstore.io/api/experimental/package/{localMod.Author}/{localMod.ModName}/{localMod.LatestVersion ?? localMod.Version}/readme/");
+            return await responseMessage.Content.ReadFromJsonAsync<ThunderStoreChangelogOrReadMeResponse>(Program.JsonSerializerDefaults);
         }
     }
 }

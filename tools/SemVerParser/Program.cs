@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
+using LibGit2Sharp;
 using OoLunar.ConvenientCompany.Tools.SemVerParser.Entities;
 using OoLunar.ConvenientCompany.Tools.SemVerParser.Entities.Api;
+using Version = System.Version;
 
 namespace OoLunar.ConvenientCompany.Tools.SemVerParser
 {
@@ -19,6 +21,27 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
 
         public static async Task<int> Main(string[] args)
         {
+            if (args.Contains("--help") || args.Contains("-h"))
+            {
+                Console.WriteLine("Usage: SemVerParser [options]");
+                Console.WriteLine("Options:");
+                Console.WriteLine("  --help, -h            Show this help message and exit.");
+                Console.WriteLine("  --version, -v         Show the version number and exit.");
+                Console.WriteLine("  --all-changelogs      Generate changelogs for all versions/releases of the modpack.");
+                Console.WriteLine("  --just-changelog      Generate a changelog for the latest release of the modpack.");
+                return 0;
+            }
+            else if (args.Contains("--version") || args.Contains("-v"))
+            {
+                Console.WriteLine(ThisAssembly.Project.Version);
+                return 0;
+            }
+            else if (args.Contains("--all-changelogs"))
+            {
+                await WriteAllChangelogsAsync();
+                return 0;
+            }
+
             ThunderStoreManifest manifest = FileTools.ParseManifestFile();
             IReadOnlyDictionary<LocalMod, LocalModAction> modStatuses = ThunderStoreTools.GetLocalModDiff(manifest, GitTools.GetLastPublishedManifest());
             if (args.Contains("--just-changelog"))
@@ -51,6 +74,32 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
             int downgradedMods = modStatuses.Count(x => x.Value == LocalModAction.Downgrade);
             Console.WriteLine($"Added {addedMods} mods, removed {removedMods} mods, updated {updatedMods} mods, and downgraded {downgradedMods} mods with a total of {modStatuses.Count} mods installed.");
             return 0;
+        }
+
+        private static async ValueTask WriteAllChangelogsAsync()
+        {
+            IReadOnlyList<Tag> tags = GitTools.GetTags();
+            for (int i = 0; i < tags.Count; i++)
+            {
+                Tag tag = tags[i];
+                ThunderStoreManifest manifest = JsonSerializer
+                    .Deserialize<ThunderStoreManifest>(tag
+                        .Target
+                        .Peel<Commit>()["manifest.json"]
+                        .Target
+                        .Peel<Blob>()
+                        .GetContentText(), JsonSerializerDefaults)
+                    .NullPanic($"Unable to parse manifest file on tag {tag.FriendlyName}.");
+
+                ThunderStoreManifest? lastPublishedManifest = null;
+                if (i != 0)
+                {
+                    lastPublishedManifest = GitTools.GetLastPublishedManifest(tag);
+                }
+
+                IReadOnlyDictionary<LocalMod, LocalModAction> modStatuses = ThunderStoreTools.GetLocalModDiff(manifest, lastPublishedManifest);
+                await FileTools.WriteChangelogAsync(modStatuses, $"changelog-{tag.FriendlyName}.md");
+            }
         }
 
         private static Version BumpVersion(IReadOnlyDictionary<LocalMod, LocalModAction> modStatuses, ThunderStoreManifest currentManifest, ThunderStoreManifest? lastPublishedManifest = null)

@@ -92,11 +92,13 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
             }
         };
 
-        public static ThunderStoreManifest? GetLastPublishedManifest()
+        public static IReadOnlyList<Tag> GetTags() => _repository.Tags.OrderBy(x => Version.Parse(x.FriendlyName)).ToList();
+
+        public static ThunderStoreManifest? GetLastPublishedManifest(Tag? fromTag = null)
         {
             // Compare latest commit to the latest tag.
             Commit? latestTag = null;
-            Commit latestCommit = _repository.Head.Tip;
+            Commit latestCommit = fromTag?.PeeledTarget.Peel<Commit>() ?? _repository.Head.Tip;
             foreach (Tag tag in _repository.Tags)
             {
                 // Ensure the tag is a commit and that it is older than the head commit.

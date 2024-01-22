@@ -56,7 +56,7 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
             JsonSerializer.Serialize(manifestStream, manifest, Program.JsonSerializerDefaults);
         }
 
-        public static async ValueTask WriteChangelogAsync(IReadOnlyDictionary<LocalMod, LocalModAction> modStatuses)
+        public static async ValueTask WriteChangelogAsync(IReadOnlyDictionary<LocalMod, LocalModAction> modStatuses, string filename = "CHANGELOG.md")
         {
             StringBuilder changelogBuilder = new();
             if (modStatuses.Count == 0)
@@ -86,6 +86,13 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
                         foreach ((LocalMod mod, LocalModAction action) in group)
                         {
                             changelogBuilder.AppendLine($"- `{mod.ModName}` by `{mod.Author}`");
+                        }
+                    }
+                    else if (group.Key is LocalModAction.Downgrade)
+                    {
+                        foreach ((LocalMod mod, LocalModAction action) in group)
+                        {
+                            changelogBuilder.AppendLine($"- `{mod.ModName}` by `{mod.Author}` from `{mod.LatestVersion?.ToString() ?? "Unknown Version"}` to `{mod.Version}`");
                         }
                     }
                     else
@@ -129,7 +136,7 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
                 }
             }
 
-            using FileStream changelogStream = File.OpenWrite($"{ThisAssembly.Project.ProjectRoot}/CHANGELOG.md");
+            using FileStream changelogStream = File.OpenWrite(Path.Combine(ThisAssembly.Project.ProjectRoot, filename));
             changelogStream.SetLength(0);
             changelogStream.Write(Encoding.UTF8.GetBytes(changelogBuilder.ToString()));
         }
@@ -224,7 +231,7 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
             }
             else
             {
-                return;
+                changelogSectionBuilder.AppendLine("\t> No changelog was provided.");
             }
 
             changelogBuilder.Append(changelogSectionBuilder);

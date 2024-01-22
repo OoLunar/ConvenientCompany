@@ -4,8 +4,8 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser.Entities
     {
         None,
         Install,
-        Upgrade,
+        Uninstall,
         Downgrade,
-        Uninstall
+        Upgrade,
     }
 }

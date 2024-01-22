@@ -65,7 +65,7 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
             }
             else
             {
-                foreach (var group in modStatuses.OrderBy(x => x.Key.ModName).GroupBy(x => x.Value))
+                foreach (var group in modStatuses.GroupBy(x => x.Value).OrderBy(x => x.Key))
                 {
                     if (group.Key is LocalModAction.None)
                     {

@@ -104,7 +104,7 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
                             else if ((await ThunderStoreTools.GetReadMeAsync(mod)) is ThunderStoreChangelogOrReadMeResponse readMeResponse && !string.IsNullOrWhiteSpace(readMeResponse.Markdown))
                             {
                                 changelogBuilder.AppendLine($"- `{mod.ModName}` by `{mod.Author}` from `{mod.Version}` to [`{mod.LatestVersion}`](https://thunderstore.io/c/lethal-company/p/{mod.Author}/{mod.ModName}/)");
-                                ParseChangelogFile(mod, readMeResponse.Markdown, changelogBuilder);
+                                ParseChangelogFile(mod, readMeResponse.Markdown, changelogBuilder, true);
                             }
                             else if ((await ThunderStoreTools.GetWebsiteUrlAsync(mod)) is Uri websiteUrl && (await GitTools.GetReleaseAsync(websiteUrl, mod.LatestVersion)) is (Uri releaseUrl, string releaseBody))
                             {
@@ -157,7 +157,7 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
             modpackArchive.CreateEntryFromFile($"{ThisAssembly.Project.ProjectRoot}/CHANGELOG.md", "CHANGELOG.md", CompressionLevel.SmallestSize);
         }
 
-        private static void ParseChangelogFile(LocalMod mod, string changelog, StringBuilder changelogBuilder)
+        private static void ParseChangelogFile(LocalMod mod, string changelog, StringBuilder changelogBuilder, bool isReadMe = false)
         {
             StringBuilder changelogSectionBuilder = new();
             string[] changelogLines = changelog.Split('\n', StringSplitOptions.RemoveEmptyEntries);
@@ -211,7 +211,7 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
                     }
                 }
             }
-            else
+            else if (!isReadMe)
             {
                 for (int i = 0; i < changelogLines.Length; i++)
                 {
@@ -221,6 +221,10 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
                         changelogSectionBuilder.AppendLine($"\t> {changelogLines[i]}");
                     }
                 }
+            }
+            else
+            {
+                return;
             }
 
             changelogBuilder.Append(changelogSectionBuilder);

@@ -5,7 +5,9 @@ using System.IO.Compression;
 using System.IO.Pipelines;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Json;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using OoLunar.ConvenientCompany.Tools.SemVerParser.Entities;
 using OoLunar.ConvenientCompany.Tools.SemVerParser.Entities.Api;
@@ -14,11 +16,32 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
 {
     public static class ThunderStoreTools
     {
-        private static readonly HttpClient _httpClient = new()
+        private sealed class ThunderStoreRateLimitHandler : DelegatingHandler
+        {
+            public ThunderStoreRateLimitHandler() : base(new HttpClientHandler()) { }
+            public ThunderStoreRateLimitHandler(HttpMessageHandler innerHandler) : base(innerHandler) { }
+            protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+            {
+                HttpResponseMessage responseMessage;
+                do
+                {
+                    responseMessage = await base.SendAsync(request, cancellationToken);
+                    if (responseMessage.StatusCode == HttpStatusCode.TooManyRequests)
+                    {
+                        Console.WriteLine("Hit the ratelimit. Waiting 15 seconds...");
+                        await Task.Delay(TimeSpan.FromSeconds(15), cancellationToken);
+                    }
+                } while (responseMessage.StatusCode == HttpStatusCode.TooManyRequests);
+
+                return responseMessage;
+            }
+        }
+
+        private static readonly HttpClient _httpClient = new(new ThunderStoreRateLimitHandler())
         {
             DefaultRequestHeaders =
             {
-                { "User-Agent", $"{ThisAssembly.Project.AssemblyName}/{ThisAssembly.Project.Version} ({ThisAssembly.Project.RepositoryUrl})" }
+                { "User-Agent", Program.HTTP_AGENT }
             }
         };
 
@@ -115,16 +138,7 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
         public static async ValueTask<IReadOnlyDictionary<LocalMod, LocalModAction>> CheckForRemoteUpdatesAsync(IReadOnlyDictionary<LocalMod, LocalModAction> localModDiff)
         {
             Dictionary<LocalMod, LocalModAction> remoteUpdates = new(localModDiff, LocalModIdEqualityComparer.Instance);
-            HttpResponseMessage responseMessage;
-            do
-            {
-                responseMessage = await _httpClient.GetAsync("https://thunderstore.io/api/experimental/package-index/");
-                if (responseMessage.StatusCode == HttpStatusCode.TooManyRequests)
-                {
-                    Console.WriteLine("Hit the ratelimit. Waiting 15 seconds...");
-                    await Task.Delay(TimeSpan.FromSeconds(15));
-                }
-            } while (responseMessage.StatusCode == HttpStatusCode.TooManyRequests);
+            HttpResponseMessage responseMessage = await _httpClient.GetAsync("https://thunderstore.io/api/experimental/package-index/");
             responseMessage.EnsureSuccessStatusCode();
 
             PipeReader reader = PipeReader.Create(new GZipStream(await responseMessage.Content.ReadAsStreamAsync(), CompressionMode.Decompress, false));
@@ -180,6 +194,22 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
             }
 
             return remoteUpdates;
+        }
+
+        public static async ValueTask<Uri?> GetWebsiteUrlAsync(LocalMod localMod)
+        {
+            HttpResponseMessage responseMessage = await _httpClient.GetAsync($"https://thunderstore.io/api/experimental/package/{localMod.Author}/{localMod.ModName}/");
+            responseMessage.EnsureSuccessStatusCode();
+
+            ThunderStorePackage? remoteMod = await responseMessage.Content.ReadFromJsonAsync<ThunderStorePackage>(Program.JsonSerializerDefaults);
+            return string.IsNullOrWhiteSpace(remoteMod?.Latest.WebsiteUrl) ? null : new(remoteMod.Latest.WebsiteUrl);
+        }
+
+        public static async ValueTask<ThunderStoreChangelogResponse?> GetChangelogAsync(LocalMod localMod)
+        {
+            HttpResponseMessage responseMessage = await _httpClient.GetAsync($"https://thunderstore.io/api/experimental/package/{localMod.Author}/{localMod.ModName}/{localMod.LatestVersion ?? localMod.Version}/changelog/");
+            responseMessage.EnsureSuccessStatusCode();
+            return await responseMessage.Content.ReadFromJsonAsync<ThunderStoreChangelogResponse>(Program.JsonSerializerDefaults);
         }
     }
 }

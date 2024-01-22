@@ -5,12 +5,14 @@ using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using OoLunar.ConvenientCompany.Tools.SemVerParser.Entities;
 using OoLunar.ConvenientCompany.Tools.SemVerParser.Entities.Api;
 
 namespace OoLunar.ConvenientCompany.Tools.SemVerParser
 {
-    public sealed class FileTools
+    public sealed partial class FileTools
     {
         private const string MANIFEST_FILE = ThisAssembly.Project.ProjectRoot + "/manifest.json";
         private static readonly string[] ProjectFiles = [
@@ -54,7 +56,7 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
             JsonSerializer.Serialize(manifestStream, manifest, Program.JsonSerializerDefaults);
         }
 
-        public static void WriteChangelog(IReadOnlyDictionary<LocalMod, LocalModAction> modStatuses)
+        public static async ValueTask WriteChangelogAsync(IReadOnlyDictionary<LocalMod, LocalModAction> modStatuses)
         {
             StringBuilder changelogBuilder = new();
             if (modStatuses.Count == 0)
@@ -90,9 +92,28 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
                     {
                         foreach ((LocalMod mod, LocalModAction action) in group)
                         {
-                            if (mod.LatestVersion is not null)
+                            if (mod.LatestVersion is null || mod.LatestVersion == mod.Version)
                             {
-                                changelogBuilder.AppendLine($"- `{mod.ModName}` by `{mod.Author}` from `{mod.Version}` to `{mod.LatestVersion}`");
+                                continue;
+                            }
+                            else if ((await ThunderStoreTools.GetChangelogAsync(mod)) is ThunderStoreChangelogResponse changelogResponse && !string.IsNullOrWhiteSpace(changelogResponse.Markdown))
+                            {
+                                changelogBuilder.AppendLine($"- `{mod.ModName}` by `{mod.Author}` from `{mod.Version}` to [`{mod.LatestVersion}`](https://thunderstore.io/c/lethal-company/p/{mod.Author}/{mod.ModName}/changelog/)");
+                                ParseChangelogFile(mod, changelogResponse.Markdown, changelogBuilder);
+                            }
+                            else if ((await ThunderStoreTools.GetWebsiteUrlAsync(mod)) is Uri websiteUrl && (await GitTools.GetReleaseAsync(websiteUrl, mod.LatestVersion)) is (Uri releaseUrl, string releaseBody))
+                            {
+                                changelogBuilder.AppendLine($"- `{mod.ModName}` by `{mod.Author}` from `{mod.Version}` to [`{mod.LatestVersion}`]({releaseUrl})");
+                                changelogBuilder.AppendLine(string.IsNullOrWhiteSpace(releaseBody)
+                                    ? "\t> No changelog was provided."
+                                    : $"\t> {releaseBody}"
+                                );
+                            }
+                            else
+                            {
+                                // We were unable to parse the changelog - likely because it was put somewhere unconventional. Like on the README.
+                                changelogBuilder.AppendLine($"- `{mod.ModName}` by `{mod.Author}` from `{mod.Version}` to [`{mod.LatestVersion}`](https://thunderstore.io/c/lethal-company/p/{mod.Author}/{mod.ModName}/changelog/)");
+                                changelogBuilder.AppendLine("\t> No changelog was found.");
                             }
                         }
                     }
@@ -126,5 +147,77 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
 
             modpackArchive.CreateEntryFromFile($"{ThisAssembly.Project.ProjectRoot}/CHANGELOG.md", "CHANGELOG.md", CompressionLevel.SmallestSize);
         }
+
+        private static void ParseChangelogFile(LocalMod mod, string changelog, StringBuilder changelogBuilder)
+        {
+            StringBuilder changelogSectionBuilder = new();
+            string[] changelogLines = changelog.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            bool foundLatestVersionFirst = false;
+            bool foundOldestVersionFirst = false;
+            int latestVersionLine = 0;
+            int oldestVersionLine = 0;
+            for (int i = 0; i < changelogLines.Length; i++)
+            {
+                string line = changelogLines[i];
+
+                // Grab the contents between the two versions
+                // Match each line to see if we can find a semver match
+                Match semVerMatch = GetVersionRegex().Match(line);
+                string major = string.IsNullOrWhiteSpace(semVerMatch.Groups[1].Value) ? "0" : semVerMatch.Groups[1].Value;
+                string minor = string.IsNullOrWhiteSpace(semVerMatch.Groups[2].Value) ? "0" : semVerMatch.Groups[2].Value;
+                string patch = string.IsNullOrWhiteSpace(semVerMatch.Groups[3].Value) ? "0" : semVerMatch.Groups[3].Value;
+                if (semVerMatch.Success && Version.TryParse($"{major}.{minor}.{patch}", out Version? semVer))
+                {
+                    if (semVer == mod.LatestVersion)
+                    {
+                        latestVersionLine = i;
+                        if (foundOldestVersionFirst)
+                        {
+                            oldestVersionLine = changelogLines.Length;
+                            break;
+                        }
+
+                        foundLatestVersionFirst = true;
+                    }
+                    else if (semVer == mod.Version)
+                    {
+                        oldestVersionLine = i;
+                        if (foundLatestVersionFirst)
+                        {
+                            break;
+                        }
+
+                        foundOldestVersionFirst = true;
+                    }
+                }
+            }
+
+            if (foundLatestVersionFirst || foundOldestVersionFirst)
+            {
+                foreach (string line in changelogLines[latestVersionLine..oldestVersionLine])
+                {
+                    if (!string.IsNullOrWhiteSpace(line))
+                    {
+                        changelogSectionBuilder.AppendLine($"\t> {line.Trim()}");
+                    }
+                }
+            }
+            else
+            {
+                for (int i = 0; i < changelogLines.Length; i++)
+                {
+                    string line = changelogLines[i];
+                    if (!string.IsNullOrWhiteSpace(line))
+                    {
+                        changelogSectionBuilder.AppendLine($"\t> {changelogLines[i].Trim()}");
+                    }
+                }
+            }
+
+            changelogBuilder.Append(changelogSectionBuilder);
+        }
+
+        [GeneratedRegex(@"v?(\d+)\.?(\d+)?\.?(\d+)?", RegexOptions.Compiled | RegexOptions.ECMAScript | RegexOptions.IgnoreCase)]
+        private static partial Regex GetVersionRegex();
     }
 }

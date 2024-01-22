@@ -10,6 +10,7 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
 {
     public static class Program
     {
+        public const string HTTP_AGENT = $"{ThisAssembly.Project.AssemblyName}/{ThisAssembly.Project.Version} ({ThisAssembly.Project.RepositoryUrl})";
         public static readonly JsonSerializerOptions JsonSerializerDefaults = new(System.Text.Json.JsonSerializerDefaults.Web)
         {
             PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
@@ -22,7 +23,7 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
             IReadOnlyDictionary<LocalMod, LocalModAction> modStatuses = ThunderStoreTools.GetLocalModDiff(manifest, GitTools.GetLastPublishedManifest());
             if (args.Contains("--just-changelog"))
             {
-                FileTools.WriteChangelog(modStatuses);
+                await FileTools.WriteChangelogAsync(modStatuses);
                 return 0;
             }
 
@@ -41,7 +42,7 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
                 .OrderBy(x => x.Author, StringComparer.OrdinalIgnoreCase)
                 .ToList()
             );
-            FileTools.WriteChangelog(modStatuses);
+            await FileTools.WriteChangelogAsync(modStatuses);
             FileTools.GenerateModpackFile(manifest, updatedModpackVersion);
 
             int addedMods = modStatuses.Count(x => x.Value == LocalModAction.Install);

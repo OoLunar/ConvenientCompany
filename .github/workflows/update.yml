@@ -27,6 +27,9 @@ jobs:
           - name: Find Zip File
             id: find-zip
             run: echo ZIP_FILE="$(find . -name "*.zip" -print -quit)" >> $GITHUB_ENV
+          - name: Grab latest commit
+            id: grab-commit
+            run: echo COMMIT="$(git rev-parse HEAD)" >> $GITHUB_ENV
           - name: Grab latest version
             id: grab-version
             run: echo VERSION="$(jq -r '.version_number' manifest.json)" >> $GITHUB_ENV
@@ -51,6 +54,7 @@ jobs:
               draft: false
               prerelease: false
               body_path: CHANGELOG.md
+              commitish: ${{ env.COMMIT }}
           - name: Upload to Thunderstore
             if: steps.should-release.outcome == 'failure'
             uses: GreenTF/upload-thunderstore-package@v4.2

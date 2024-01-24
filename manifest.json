@@ -1,6 +1,6 @@
 {
   "name": "ConvenientCompany",
-  "version_number": "1.9.0",
+  "version_number": "1.10.0",
   "website_url": "https://github.com/OoLunar/ConvenientCompany",
   "description": "A collection of quality of life mods for Lethal Company. Completely compatible with non-modded clients.",
   "dependencies": [
@@ -16,7 +16,7 @@
     "boxofbiscuits97-QuotaRollover-2.2.1",
     "CTNOriginals-CrossHair-1.0.5",
     "Drakorle-MoreItems-1.0.2",
-    "extraes-LethalLoudnessMeter-1.0.1",
+    "extraes-LethalLoudnessMeter-1.0.2",
     "femboytv-BoykisserPosters-1.2.1",
     "FlipMods-ObjectVolumeController-1.0.4",
     "FlipMods-LetMeLookDown-1.0.1",
@@ -44,7 +44,7 @@
     "red_eye-LethalAutocomplete-0.4.3",
     "Renegades-FlashlightToggle-1.5.0",
     "Renegades-WalkieUse-1.5.0",
-    "Rune580-LethalCompany_InputUtils-0.5.6",
+    "Rune580-LethalCompany_InputUtils-0.6.0",
     "Ryokune-CompatibilityChecker-1.1.6",
     "ShaosilGaming-FlashlightFix-1.0.5",
     "Sligili-HDLethalCompany-1.5.6",

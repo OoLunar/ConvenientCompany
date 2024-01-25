@@ -142,26 +142,29 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
             responseMessage.EnsureSuccessStatusCode();
 
             PipeReader reader = PipeReader.Create(new GZipStream(await responseMessage.Content.ReadAsStreamAsync(), CompressionMode.Decompress, false));
-            ReadResult readResult;
+            ReadResult result;
             do
             {
-                readResult = await reader.ReadAsync();
-                SequencePosition? newLinePosition = readResult.Buffer.PositionOf((byte)'\n');
-                if (newLinePosition is null)
+                result = await reader.ReadAsync();
+                ReadOnlySequence<byte> buffer = result.Buffer;
+                long bytesConsumed;
+                do
                 {
-                    // We need more data
-                    reader.AdvanceTo(readResult.Buffer.Start, readResult.Buffer.End);
-                    continue;
-                }
-
-                ReadOnlySequence<byte> buffer = readResult.Buffer.Slice(0, newLinePosition.Value);
-                long bytesConsumed = ParseJsonSegment(buffer, remoteUpdates);
-                reader.AdvanceTo(readResult.Buffer.GetPosition(bytesConsumed + 1));
-            } while (!readResult.IsCompleted && !readResult.IsCanceled);
+                    bytesConsumed = ParseJsonSegment(buffer, remoteUpdates);
+                    buffer = buffer.Slice(bytesConsumed);
+                    reader.AdvanceTo(buffer.Start, buffer.End);
+                } while (bytesConsumed != 0 && !buffer.IsEmpty);
+            } while (!result.IsCompleted && !result.IsCanceled);
 
             static long ParseJsonSegment(ReadOnlySequence<byte> buffer, Dictionary<LocalMod, LocalModAction> localModMap)
             {
-                Utf8JsonReader jsonReader = new(buffer);
+                SequenceReader<byte> sequenceReader = new(buffer);
+                if (!sequenceReader.TryAdvanceTo((byte)'\n', true))
+                {
+                    return 0;
+                }
+
+                Utf8JsonReader jsonReader = new(sequenceReader.Sequence);
                 ThunderStorePackageListing? remoteModListing = JsonSerializer.Deserialize<ThunderStorePackageListing>(ref jsonReader, Program.JsonSerializerDefaults);
                 if (remoteModListing is null)
                 {
@@ -190,7 +193,7 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
                     }
                 }
 
-                return jsonReader.BytesConsumed;
+                return jsonReader.BytesConsumed + 1;
             }
 
             return remoteUpdates;

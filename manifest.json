@@ -5,6 +5,8 @@
   "description": "A collection of quality of life mods for Lethal Company. Completely compatible with non-modded clients.",
   "dependencies": [
     "5Bit-VoiceHUD-1.0.4",
+    "Ryokune-Better_Lobbies-1.0.5",
+    "ZG-ScalingStartCredits-1.0.6",
     "AllToasters-QuickRestart-1.2.0",
     "AllToasters-SpectateEnemies-2.3.0",
     "AnythingGoesGit-MoreDeathNotes-1.4.0",

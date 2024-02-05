@@ -4,6 +4,7 @@
   "website_url": "https://github.com/OoLunar/ConvenientCompany",
   "description": "A collection of quality of life mods for Lethal Company. Completely compatible with non-modded clients.",
   "dependencies": [
+    "OoLunar-LethalCompanyPatched-1.0.0",
     "5Bit-VoiceHUD-1.0.4",
     "AllToasters-QuickRestart-1.2.0",
     "AllToasters-SpectateEnemies-2.3.0",
@@ -44,7 +45,7 @@
     "Ryokune-Better_Lobbies-1.0.5",
     "ShaosilGaming-FlashlightFix-1.0.7",
     "Sligili-HDLethalCompany-1.5.6",
-    "Solar32-MoneyMenu-1.4.4",
+    "299792458-MoreMoneyStart-2.1.0",
     "Spyci-CozyImprovements-1.2.2",
     "sunnobunno-BonkHitSFX-1.0.5",
     "sunnobunno-YippeeMod-1.2.3",

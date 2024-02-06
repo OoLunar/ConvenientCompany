@@ -1,0 +1,74 @@
+name: Manual Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag_version:
+        type: string
+        description: 'Tag version to release'
+        required: true
+
+jobs:
+  manual-release:
+    name: Manual Release
+    runs-on: ubuntu-latest
+    permissions: write-all
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Edit version
+        run: |
+          echo "Setting version to ${{ github.event.inputs.tag_version }}"
+          sed -i "s/\"version_number\": \".*\"/\"version_number\": \"${{ github.event.inputs.tag_version }}\"/" manifest.json
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: 8
+      - name: Process commit
+        run: dotnet run --project tools/SemVerParser/SemVerParser.csproj -- --just-changelog
+      - name: Commit changes
+        run: tools/commit-if-needed.sh
+      - name: Grab latest commit
+        id: grab-commit
+        run: echo COMMIT="$(git rev-parse HEAD)" >> $GITHUB_ENV
+      - name: Grab modpack name
+        id: grab-modpack-name
+        run: echo MODPACK_NAME="$(jq -r '.name' manifest.json)" >> $GITHUB_ENV
+      - name: Grab modpack description
+        id: grab-modpack-description
+        run: echo MODPACK_DESCRIPTION="$(jq -r '.description' manifest.json)" >> $GITHUB_ENV
+      - name: Manual packing
+        run: zip -9r OoLunar-${{ env.MODPACK_NAME }}-${{ github.event.inputs.tag_version }}.zip manifest.json icon.png README.md CHANGELOG.md
+      - name: Find Zip File
+        id: find-zip
+        run: echo ZIP_FILE="$(find . -name "*.zip" -print -quit)" >> $GITHUB_ENV
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.event.inputs.tag_version }}
+          release_name: v${{ github.event.inputs.tag_version }}
+          body_path: CHANGELOG.md
+          commitish: ${{ env.COMMIT }}
+      - name: Upload to Thunderstore
+        uses: GreenTF/upload-thunderstore-package@v4.2
+        with:
+          token: ${{ secrets.THUNDERSTORE_TOKEN }}
+          community: lethal-company
+          repo: northstar.thunderstore.io
+          namespace: OoLunar
+          # https://github.com/GreenTF/upload-thunderstore-package/issues/24 claims that the zip file will fill in the version and name.
+          name: ${{ env.MODPACK_NAME }}
+          description: ${{ env.MODPACK_DESCRIPTION }}
+          version: ${{ github.event.inputs.tag_version }}
+          file: ${{ env.ZIP_FILE }}
+          categories: |
+            modpacks,
+            tools,
+            audio,
+            clientside,
+            video,
+            poster

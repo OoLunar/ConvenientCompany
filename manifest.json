@@ -1,13 +1,13 @@
 {
   "name": "ConvenientCompany",
-  "version_number": "1.18.0",
+  "version_number": "1.19.0",
   "website_url": "https://github.com/OoLunar/ConvenientCompany",
   "description": "A collection of quality of life mods for Lethal Company. Completely compatible with non-modded clients.",
   "dependencies": [
     "299792458-MoreMoneyStart-2.1.0",
     "5Bit-VoiceHUD-1.0.4",
     "AllToasters-QuickRestart-1.2.0",
-    "AllToasters-SpectateEnemies-2.3.1",
+    "AllToasters-SpectateEnemies-2.4.1",
     "AnythingGoesGit-MoreDeathNotes-1.4.0",
     "Asc3nt-TomJerryTVpack-1.0.0",
     "atg-FnafPowerOutage-1.0.1",

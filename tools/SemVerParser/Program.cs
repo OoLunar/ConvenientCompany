@@ -113,8 +113,9 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
             {
                 if (action == LocalModAction.Install
                     || action == LocalModAction.Uninstall
-                    || mod.LatestVersion?.Major != mod.Version.Major // *1*.2.0
-                    || mod.LatestVersion?.Minor != mod.Version.Minor) // 1.*2*.0
+                    || mod.TrueVersion is null // Someone didn't follow semver. Bump the minor version.
+                    || mod.LatestVersion?.Major != mod.TrueVersion.Major // *1*.2.0
+                    || mod.LatestVersion?.Minor != mod.TrueVersion.Minor) // 1.*2*.0
                 {
                     return new Version(currentManifest.VersionNumber.Major, currentManifest.VersionNumber.Minor + 1, 0);
                 }

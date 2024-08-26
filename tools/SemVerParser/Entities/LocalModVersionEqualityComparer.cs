@@ -6,7 +6,7 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser.Entities
     {
         public static readonly LocalModVersionEqualityComparer Instance = new();
 
-        public bool Equals(LocalMod? x, LocalMod? y) => x?.Author == y?.Author && x?.ModName == y?.ModName && (x?.LatestVersion ?? x?.Version) == y?.Version;
-        public int GetHashCode(LocalMod obj) => obj.Author.GetHashCode() ^ obj.ModName.GetHashCode() ^ (obj.LatestVersion?.GetHashCode() ?? obj.Version.GetHashCode());
+        public bool Equals(LocalMod? x, LocalMod? y) => x?.Author == y?.Author && x?.ModName == y?.ModName && (x?.LatestVersion ?? x?.TrueVersion) == y?.TrueVersion;
+        public int GetHashCode(LocalMod obj) => obj.Author.GetHashCode() ^ obj.ModName.GetHashCode() ^ (obj.LatestVersion?.GetHashCode() ?? obj.TrueVersion.GetHashCode());
     }
 }

@@ -75,16 +75,16 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
                     }
 
                     // Check if the mod was updated.
-                    if (newMod.Version > oldMod.Version)
+                    if (newMod.TrueVersion > oldMod.TrueVersion)
                     {
-                        newMod.LatestVersion = newMod.Version;
-                        newMod.Version = oldMod.Version;
+                        newMod.LatestVersion = newMod.TrueVersion;
+                        newMod.VersionNumber = oldMod.VersionNumber;
                         modStatuses.Add(newMod, LocalModAction.Upgrade);
                     }
                     // Check if the mod was downgraded.
-                    else if (newMod.Version < oldMod.Version)
+                    else if (newMod.TrueVersion < oldMod.TrueVersion)
                     {
-                        newMod.LatestVersion = oldMod.Version;
+                        newMod.LatestVersion = oldMod.TrueVersion;
                         modStatuses.Add(newMod, LocalModAction.Downgrade);
                     }
                     // Otherwise, the mod was not updated locally.
@@ -175,14 +175,14 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
                 {
                     Author = remoteModListing.Namespace,
                     ModName = remoteModListing.Name,
-                    Version = remoteModListing.VersionNumber
+                    VersionNumber = remoteModListing.VersionNumber
                 };
 
                 foreach (LocalMod localMod in localModMap.Keys)
                 {
-                    if (LocalModIdEqualityComparer.Instance.Equals(localMod, remoteMod) && localMod.Version < remoteModListing.VersionNumber)
+                    if (LocalModIdEqualityComparer.Instance.Equals(localMod, remoteMod) && localMod.TrueVersion < remoteModListing.TrueVersionNumber)
                     {
-                        localMod.LatestVersion = remoteModListing.VersionNumber;
+                        localMod.LatestVersion = remoteModListing.TrueVersionNumber;
                         LocalModAction localModAction = localModMap[localMod];
                         if (localModAction is not LocalModAction.Install)
                         {
@@ -210,13 +210,13 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
 
         public static async ValueTask<ThunderStoreChangelogOrReadMeResponse?> GetChangelogAsync(LocalMod localMod)
         {
-            HttpResponseMessage responseMessage = await _httpClient.GetAsync($"https://thunderstore.io/api/experimental/package/{localMod.Author}/{localMod.ModName}/{localMod.LatestVersion ?? localMod.Version}/changelog/");
+            HttpResponseMessage responseMessage = await _httpClient.GetAsync($"https://thunderstore.io/api/experimental/package/{localMod.Author}/{localMod.ModName}/{localMod.LatestVersion ?? localMod.TrueVersion}/changelog/");
             return await responseMessage.Content.ReadFromJsonAsync<ThunderStoreChangelogOrReadMeResponse>(Program.JsonSerializerDefaults);
         }
 
         public static async ValueTask<ThunderStoreChangelogOrReadMeResponse?> GetReadMeAsync(LocalMod localMod)
         {
-            HttpResponseMessage responseMessage = await _httpClient.GetAsync($"https://thunderstore.io/api/experimental/package/{localMod.Author}/{localMod.ModName}/{localMod.LatestVersion ?? localMod.Version}/readme/");
+            HttpResponseMessage responseMessage = await _httpClient.GetAsync($"https://thunderstore.io/api/experimental/package/{localMod.Author}/{localMod.ModName}/{localMod.LatestVersion ?? localMod.TrueVersion}/readme/");
             return await responseMessage.Content.ReadFromJsonAsync<ThunderStoreChangelogOrReadMeResponse>(Program.JsonSerializerDefaults);
         }
     }

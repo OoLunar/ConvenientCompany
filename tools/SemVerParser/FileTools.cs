@@ -92,30 +92,30 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
                     {
                         foreach ((LocalMod mod, LocalModAction action) in group)
                         {
-                            changelogBuilder.AppendLine($"- `{mod.ModName}` by `{mod.Author}` from `{mod.LatestVersion?.ToString() ?? "Unknown Version"}` to `{mod.Version}`");
+                            changelogBuilder.AppendLine($"- `{mod.ModName}` by `{mod.Author}` from `{mod.LatestVersion?.ToString() ?? "Unknown Version"}` to `{mod.TrueVersion}`");
                         }
                     }
                     else
                     {
                         foreach ((LocalMod mod, LocalModAction action) in group)
                         {
-                            if (mod.LatestVersion is null || mod.LatestVersion == mod.Version)
+                            if (mod.LatestVersion is null || mod.LatestVersion == mod.TrueVersion)
                             {
                                 continue;
                             }
                             else if ((await ThunderStoreTools.GetChangelogAsync(mod)) is ThunderStoreChangelogOrReadMeResponse changelogResponse && !string.IsNullOrWhiteSpace(changelogResponse.Markdown))
                             {
-                                changelogBuilder.AppendLine($"- `{mod.ModName}` by `{mod.Author}` from `{mod.Version}` to [`{mod.LatestVersion}`](https://thunderstore.io/c/lethal-company/p/{mod.Author}/{mod.ModName}/changelog/)");
+                                changelogBuilder.AppendLine($"- `{mod.ModName}` by `{mod.Author}` from `{mod.TrueVersion}` to [`{mod.LatestVersion}`](https://thunderstore.io/c/lethal-company/p/{mod.Author}/{mod.ModName}/changelog/)");
                                 ParseChangelogFile(mod, changelogResponse.Markdown, changelogBuilder);
                             }
                             else if ((await ThunderStoreTools.GetReadMeAsync(mod)) is ThunderStoreChangelogOrReadMeResponse readMeResponse && !string.IsNullOrWhiteSpace(readMeResponse.Markdown))
                             {
-                                changelogBuilder.AppendLine($"- `{mod.ModName}` by `{mod.Author}` from `{mod.Version}` to [`{mod.LatestVersion}`](https://thunderstore.io/c/lethal-company/p/{mod.Author}/{mod.ModName}/)");
+                                changelogBuilder.AppendLine($"- `{mod.ModName}` by `{mod.Author}` from `{mod.TrueVersion}` to [`{mod.LatestVersion}`](https://thunderstore.io/c/lethal-company/p/{mod.Author}/{mod.ModName}/)");
                                 ParseChangelogFile(mod, readMeResponse.Markdown, changelogBuilder, true);
                             }
                             else if ((await ThunderStoreTools.GetWebsiteUrlAsync(mod)) is Uri websiteUrl && (await GitTools.GetReleaseAsync(websiteUrl, mod.LatestVersion)) is (Uri releaseUrl, string releaseBody))
                             {
-                                changelogBuilder.AppendLine($"- `{mod.ModName}` by `{mod.Author}` from `{mod.Version}` to [`{mod.LatestVersion}`]({releaseUrl})");
+                                changelogBuilder.AppendLine($"- `{mod.ModName}` by `{mod.Author}` from `{mod.TrueVersion}` to [`{mod.LatestVersion}`]({releaseUrl})");
                                 if (!string.IsNullOrWhiteSpace(releaseBody))
                                 {
                                     ParseChangelogFile(mod, releaseBody, changelogBuilder);
@@ -128,7 +128,7 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
                             else
                             {
                                 // We were unable to parse the changelog - likely because it was put somewhere unconventional. Like on the README.
-                                changelogBuilder.AppendLine($"- `{mod.ModName}` by `{mod.Author}` from `{mod.Version}` to [`{mod.LatestVersion}`](https://thunderstore.io/c/lethal-company/p/{mod.Author}/{mod.ModName}/changelog/)");
+                                changelogBuilder.AppendLine($"- `{mod.ModName}` by `{mod.Author}` from `{mod.TrueVersion}` to [`{mod.LatestVersion}`](https://thunderstore.io/c/lethal-company/p/{mod.Author}/{mod.ModName}/changelog/)");
                                 changelogBuilder.AppendLine("\t> No changelog was provided.");
                             }
                         }
@@ -195,7 +195,7 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
 
                         foundLatestVersionFirst = true;
                     }
-                    else if (semVer == mod.Version)
+                    else if (semVer == mod.TrueVersion)
                     {
                         oldestVersionLine = i;
                         if (foundLatestVersionFirst)

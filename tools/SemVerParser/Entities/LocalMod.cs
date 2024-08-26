@@ -8,7 +8,12 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser.Entities
     {
         public required string Author { get; init; }
         public required string ModName { get; init; }
-        public required Version Version { get; set; }
+
+        [JsonPropertyName("version")]
+        public required string VersionNumber { get; set; }
+
+        [JsonIgnore]
+        public Version? TrueVersion => Version.TryParse(VersionNumber, out Version? version) ? version : null;
 
         [JsonIgnore] // This property should only be kept in memory.
         public Version? LatestVersion { get; set; }

@@ -15,19 +15,14 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser.Entities
             }
 
             string[] parts = value.Split('-');
-            if (parts.Length != 3 || !Version.TryParse(parts[2], out Version? version))
-            {
-                return null;
-            }
-
-            return new LocalMod
+            return parts.Length != 3 ? null : new LocalMod
             {
                 Author = parts[0],
                 ModName = parts[1],
-                Version = version
+                VersionNumber = parts[2]
             };
         }
 
-        public override void Write(Utf8JsonWriter writer, LocalMod value, JsonSerializerOptions options) => writer.WriteStringValue($"{value.Author}-{value.ModName}-{value.LatestVersion ?? value.Version}");
+        public override void Write(Utf8JsonWriter writer, LocalMod value, JsonSerializerOptions options) => writer.WriteStringValue($"{value.Author}-{value.ModName}-{value.LatestVersion ?? value.TrueVersion}");
     }
 }

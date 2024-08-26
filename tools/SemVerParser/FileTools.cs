@@ -22,6 +22,9 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
             "README.md"
         ];
 
+        [GeneratedRegex(@"@([A-z0-9-_]*)", RegexOptions.Compiled)]
+        private static partial Regex MentionRegex();
+
         public static ThunderStoreManifest ParseManifestFile()
         {
             try
@@ -136,9 +139,13 @@ namespace OoLunar.ConvenientCompany.Tools.SemVerParser
                 }
             }
 
+            // Replace all GitHub mentions with links.
+            string changelog = changelogBuilder.ToString();
+            changelog = MentionRegex().Replace(changelog, "[`@$1`](https://github.com/$1)");
+
             using FileStream changelogStream = File.OpenWrite(Path.Combine(ThisAssembly.Project.ProjectRoot, filename));
             changelogStream.SetLength(0);
-            changelogStream.Write(Encoding.UTF8.GetBytes(changelogBuilder.ToString()));
+            changelogStream.Write(Encoding.UTF8.GetBytes(changelog));
         }
 
         public static void GenerateModpackFile(ThunderStoreManifest manifest, Version updatedModpackVersion)
